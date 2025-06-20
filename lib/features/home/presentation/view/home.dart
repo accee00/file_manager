@@ -24,7 +24,6 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   bool _sortAscending = true;
 
-  String _currentPath = '';
   List<Directory> _availableDirectories = [];
 
   @override
@@ -38,6 +37,49 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<int> _countItems(Directory dir) async {
+    try {
+      final List<FileSystemEntity> items = await dir.list().toList();
+      return items.length;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  Future<int> _getDirectorySize(Directory dir) async {
+    try {
+      int size = 0;
+      await for (var entity in dir.list(recursive: true, followLinks: false)) {
+        if (entity is File) {
+          try {
+            size += await entity.length();
+          } catch (e) {
+            // Skip files that can't be read
+            continue;
+          }
+        }
+      }
+      return size;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  String _formatSize(int bytes) {
+    if (bytes == 0) return '0 B';
+
+    const suffixes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    int i = 0;
+    double size = bytes.toDouble();
+
+    while (size >= 1024 && i < suffixes.length - 1) {
+      size /= 1024;
+      i++;
+    }
+
+    return '${size.toStringAsFixed(size < 10 ? 1 : 0)} ${suffixes[i]}';
   }
 
   Future<void> _initializeDirectory() async {
@@ -65,7 +107,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
       setState(() {
         _currentDirectory = startDir;
-        _currentPath = startDir.path;
       });
 
       await _loadFiles();
@@ -74,7 +115,6 @@ class _HomeScreenState extends State<HomeScreen> {
         Directory appDir = await getApplicationDocumentsDirectory();
         setState(() {
           _currentDirectory = appDir;
-          _currentPath = appDir.path;
         });
         await _loadFiles();
       } catch (e2) {
@@ -202,7 +242,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _navigateToDirectory(Directory dir) async {
     setState(() {
       _currentDirectory = dir;
-      _currentPath = dir.path;
     });
     await _loadFiles();
   }
@@ -213,80 +252,30 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _navigateToRoot() async {
-    Directory root;
-    if (Platform.isAndroid) {
-      root = Directory('/storage/emulated/0');
-      if (!await root.exists()) root = Directory('/');
-    } else {
-      root = await getApplicationDocumentsDirectory();
-    }
-    await _navigateToDirectory(root);
-  }
+  // Future<void> _navigateToRoot() async {
+  //   Directory root;
+  //   if (Platform.isAndroid) {
+  //     root = Directory('/storage/emulated/0');
+  //     if (!await root.exists()) root = Directory('/');
+  //   } else {
+  //     root = await getApplicationDocumentsDirectory();
+  //   }
+  //   await _navigateToDirectory(root);
+  // }
 
-  void _showDirectorySelector() {
-    showModalBottomSheet(
-      context: context,
-      builder: (_) => SingleChildScrollView(
-        clipBehavior: Clip.hardEdge,
-        child: Container(
-          clipBehavior: Clip.hardEdge,
-          decoration: BoxDecoration(
-            color: Color(0xFFF7F9FC),
-
-            borderRadius: BorderRadius.circular(25),
-          ),
-          padding: EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Quick Access',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 16),
-              ..._availableDirectories.map((dir) {
-                return ListTile(
-                  leading: Icon(Icons.folder, color: Colors.amber),
-                  title: Text(_getDirectoryDisplayName(dir.path)),
-                  subtitle: Text(dir.path),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _navigateToDirectory(dir);
-                  },
-                );
-              }),
-              if (Platform.isAndroid)
-                ListTile(
-                  leading: Icon(Icons.smartphone, color: Colors.green),
-                  title: Text('Device Root'),
-                  subtitle: Text('/'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _navigateToDirectory(Directory('/'));
-                  },
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _getDirectoryDisplayName(String path) {
-    if (path.contains('Documents')) return 'Documents';
-    if (path.contains('Download')) return 'Downloads';
-    if (path.contains('Pictures')) return 'Pictures';
-    if (path.contains('DCIM')) return 'Camera';
-    if (path.contains('Music')) return 'Music';
-    if (path.contains('Movies')) return 'Movies';
-    if (path == '/storage/emulated/0') return 'Internal Storage';
-    if (path == '/') return 'Root';
-    if (path.contains('Android/data')) return 'App Storage';
-    String name = path.split('/').last;
-    return name.isEmpty ? 'Root' : name;
-  }
+  // String _getDirectoryDisplayName(String path) {
+  //   if (path.contains('Documents')) return 'Documents';
+  //   if (path.contains('Download')) return 'Downloads';
+  //   if (path.contains('Pictures')) return 'Pictures';
+  //   if (path.contains('DCIM')) return 'Camera';
+  //   if (path.contains('Music')) return 'Music';
+  //   if (path.contains('Movies')) return 'Movies';
+  //   if (path == '/storage/emulated/0') return 'Internal Storage';
+  //   if (path == '/') return 'Root';
+  //   if (path.contains('Android/data')) return 'App Storage';
+  //   String name = path.split('/').last;
+  //   return name.isEmpty ? 'Root' : name;
+  // }
 
   Future<void> _createFolder() async {
     String? name = await CustomInputDialog.show(
@@ -313,8 +302,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _createFile() async {
     String? name = await CustomInputDialog.show(
       context,
-      title: 'Create New Folder',
-      hint: 'Folder Name',
+      title: 'Create New File',
+      hint: 'File Name (with extension)',
     );
     if (name != null && name.isNotEmpty) {
       try {
@@ -502,44 +491,25 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        centerTitle: true,
         title: Text(
           AppText.fileManager,
           style: Theme.of(context).textTheme.headlineSmall,
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.folder_special),
-          onPressed: _showDirectorySelector,
-        ),
         actions: [
-          IconButton(icon: const Icon(Icons.home), onPressed: _navigateToRoot),
-          IconButton(
-            icon: Icon(
-              _sortAscending
-                  ? Icons.sort_by_alpha
-                  : Icons.sort_by_alpha_outlined,
-            ),
-            tooltip: _sortAscending ? 'Sort A → Z' : 'Sort Z → A',
-            onPressed: () {
-              setState(() {
-                _sortAscending = !_sortAscending;
-              });
-              _loadFiles();
-            },
-          ),
           CreatePopupMenu(
             onCreateFolder: _createFolder,
             onCreateFile: _createFile,
           ),
         ],
       ),
-
       body: SafeArea(
         child: SingleChildScrollView(
-          child: Container(
-            margin: EdgeInsets.all(16),
-            child: Column(
-              children: [
-                TextField(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Search files or folders',
@@ -549,54 +519,166 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-                SizedBox(height: 12),
-                _isLoading
-                    ? Center(child: CircularProgressIndicator())
-                    : _filteredFiles.isEmpty
-                    ? Center(child: Text('No files or folders found'))
-                    : ListView.builder(
-                        shrinkWrap: true,
-                        physics: NeverScrollableScrollPhysics(),
-                        itemCount: _filteredFiles.length,
-                        itemBuilder: (_, i) {
-                          final item = _filteredFiles[i];
-                          final isDir = item is Directory;
-                          final name = item.path.split('/').last;
-                          return ListTile(
-                            leading: Icon(
-                              isDir ? Icons.folder : _getFileIcon(name),
-                              color: isDir ? Colors.amber : _getFileColor(name),
-                            ),
-                            title: Text(name),
-                            subtitle: isDir
-                                ? Text('Folder')
-                                : FutureBuilder<FileStat>(
-                                    future: item.stat(),
-                                    builder: (_, snap) {
-                                      if (!snap.hasData) return Text('File');
-                                      final size = snap.data!.size / 1024;
-                                      return Text(
-                                        size > 1024
-                                            ? '${(size / 1024).toStringAsFixed(1)} MB'
-                                            : '${size.toStringAsFixed(1)} KB',
-                                      );
-                                    },
-                                  ),
-                            trailing: IconButton(
-                              icon: Icon(Icons.more_vert),
-                              onPressed: () => _showItemOptions(item),
-                            ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    if (_currentDirectory?.parent != null)
+                      GestureDetector(
+                        onTap: _navigateUp,
+                        child: Container(
+                          padding: EdgeInsets.all(8),
+                          child: Icon(Icons.arrow_back),
+                        ),
+                      ),
+                    IconButton(
+                      icon: Icon(
+                        _sortAscending
+                            ? Icons.sort_by_alpha
+                            : Icons.sort_by_alpha_outlined,
+                      ),
+                      tooltip: _sortAscending ? 'Sort A → Z' : 'Sort Z → A',
+                      onPressed: () {
+                        setState(() {
+                          _sortAscending = !_sortAscending;
+                        });
+                        _loadFiles();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              _isLoading
+                  ? Center(child: CircularProgressIndicator())
+                  : _filteredFiles.isEmpty
+                  ? Center(child: Text('No files or folders found'))
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      physics: NeverScrollableScrollPhysics(),
+                      itemCount: _filteredFiles.length,
+                      itemBuilder: (_, i) {
+                        final item = _filteredFiles[i];
+                        final isDir = item is Directory;
+                        final name = item.path.split('/').last;
+
+                        return Container(
+                          width: double.infinity,
+                          margin: EdgeInsets.symmetric(
+                            vertical: 4,
+                            horizontal: 16,
+                          ),
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.1),
+                                blurRadius: 6,
+                                offset: Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: InkWell(
                             onTap: isDir
                                 ? () => _navigateToDirectory(item)
                                 : () => _showFilePreview(item as File),
-                          );
-                        },
-                      ),
-              ],
-            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isDir ? Icons.folder : _getFileIcon(name),
+                                  size: 40,
+                                  color: isDir
+                                      ? Colors.amber
+                                      : _getFileColor(name),
+                                ),
+                                SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        name,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black87,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      SizedBox(height: 4),
+                                      FutureBuilder<Map<String, dynamic>>(
+                                        future: _getItemInfo(item, isDir),
+                                        builder: (_, snapshot) {
+                                          if (!snapshot.hasData) {
+                                            return Text(
+                                              'Loading...',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey[600],
+                                              ),
+                                            );
+                                          }
+
+                                          final info = snapshot.data!;
+                                          final size = info['size'] as String;
+                                          final count = info['count'] as int?;
+
+                                          return Text(
+                                            isDir
+                                                ? '$count items • $size'
+                                                : size,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.grey[600],
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: Icon(
+                                    Icons.more_vert,
+                                    color: Colors.grey[700],
+                                  ),
+                                  onPressed: () => _showItemOptions(item),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ],
           ),
         ),
       ),
     );
+  }
+
+  Future<Map<String, dynamic>> _getItemInfo(
+    FileSystemEntity item,
+    bool isDir,
+  ) async {
+    try {
+      if (isDir) {
+        final directory = item as Directory;
+        final itemCount = await _countItems(directory);
+        final size = await _getDirectorySize(directory);
+        return {'count': itemCount, 'size': _formatSize(size)};
+      } else {
+        final file = item as File;
+        final size = await file.length();
+        return {'count': null, 'size': _formatSize(size)};
+      }
+    } catch (e) {
+      return {'count': isDir ? 0 : null, 'size': '0 B'};
+    }
   }
 }

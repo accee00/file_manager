@@ -13,8 +13,8 @@ class CreatePopupMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
+      icon: Icon(Icons.add, color: Color(0xff6B7280)),
       shadowColor: Colors.grey.shade400,
-
       color: const Color(0xFFF7F9FC),
       onSelected: (value) {
         if (value == 'create_folder') onCreateFolder();
