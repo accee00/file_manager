@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:file_manager2/features/clean/presentation/widget/app_grid_item.dart';
 import 'package:file_manager2/features/clean/presentation/widget/app_list_item.dart';
 import 'package:file_manager2/features/clean/presentation/widget/uninstall_confirmation_dialog.dart';
@@ -170,10 +172,8 @@ class _AppsScreenState extends State<AppsScreen> with TickerProviderStateMixin {
                         ]
                       : null,
                   onChanged: _filterApps,
-                  elevation: MaterialStateProperty.all(2),
-                  backgroundColor: MaterialStateProperty.all(
-                    colorScheme.surfaceContainerHigh,
-                  ),
+                  backgroundColor: WidgetStatePropertyAll(Colors.grey.shade100),
+                  shadowColor: WidgetStatePropertyAll(Colors.transparent),
                 ),
               ),
             ),

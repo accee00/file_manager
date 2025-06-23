@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:installed_apps/app_info.dart';
 
@@ -22,10 +24,9 @@ class AppGridItem extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
+        color: Colors.grey.shade200,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          // ignore: deprecated_member_use
           color: colorScheme.outlineVariant.withOpacity(0.5),
           width: 0.5,
         ),

@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:file_manager2/core/const/app_text.dart';
 import 'package:file_manager2/core/utils/custom_snackBar.dart';
 import 'package:file_manager2/features/home/presentation/view/image_viewer.dart';
@@ -489,112 +491,251 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
       appBar: AppBar(
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
         centerTitle: true,
         title: Text(
           AppText.fileManager,
-          style: Theme.of(context).textTheme.headlineSmall,
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: colorScheme.onSurface,
+          ),
         ),
         actions: [
-          CreatePopupMenu(
-            onCreateFolder: _createFolder,
-            onCreateFile: _createFile,
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: CreatePopupMenu(
+              onCreateFolder: _createFolder,
+              onCreateFile: _createFile,
+            ),
           ),
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search files or folders',
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+        child: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: Colors.grey.shade100, width: 1),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
                   children: [
-                    if (_currentDirectory?.parent != null)
-                      GestureDetector(
-                        onTap: _navigateUp,
-                        child: Container(
-                          padding: EdgeInsets.all(8),
-                          child: Icon(Icons.arrow_back),
+                    TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Search files and folders',
+                        hintStyle: TextStyle(
+                          color: colorScheme.onSurfaceVariant,
+                          fontSize: 16,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search_rounded,
+                          color: colorScheme.onSurfaceVariant,
+                          size: 22,
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
                         ),
                       ),
-                    IconButton(
-                      icon: Icon(
-                        _sortAscending
-                            ? Icons.sort_by_alpha
-                            : Icons.sort_by_alpha_outlined,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: colorScheme.onSurface,
                       ),
-                      tooltip: _sortAscending ? 'Sort A → Z' : 'Sort Z → A',
-                      onPressed: () {
-                        setState(() {
-                          _sortAscending = !_sortAscending;
-                        });
-                        _loadFiles();
-                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        if (_currentDirectory?.parent != null)
+                          Container(
+                            margin: const EdgeInsets.only(right: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: InkWell(
+                              onTap: _navigateUp,
+                              borderRadius: BorderRadius.circular(12),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.arrow_back_rounded,
+                                      size: 20,
+                                      color: colorScheme.onPrimaryContainer,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Back',
+                                      style: TextStyle(
+                                        color: colorScheme.onPrimaryContainer,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        Expanded(
+                          child: Text(
+                            _currentDirectory?.path.split('/').last ?? 'Root',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            icon: Icon(
+                              _sortAscending
+                                  ? Icons.sort_by_alpha_rounded
+                                  : Icons.sort_by_alpha_outlined,
+                              size: 22,
+                            ),
+                            tooltip: _sortAscending
+                                ? 'Sort A → Z'
+                                : 'Sort Z → A',
+                            color: colorScheme.onSurfaceVariant,
+                            onPressed: () {
+                              setState(() {
+                                _sortAscending = !_sortAscending;
+                              });
+                              _loadFiles();
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-              _isLoading
-                  ? Center(child: CircularProgressIndicator())
-                  : _filteredFiles.isEmpty
-                  ? Center(child: Text('No files or folders found'))
-                  : ListView.builder(
-                      shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(),
-                      itemCount: _filteredFiles.length,
-                      itemBuilder: (_, i) {
-                        final item = _filteredFiles[i];
-                        final isDir = item is Directory;
-                        final name = item.path.split('/').last;
+            ),
+            if (_isLoading)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(color: colorScheme.primary),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Loading files...',
+                        style: TextStyle(
+                          color: colorScheme.onSurfaceVariant,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else if (_filteredFiles.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.folder_open_rounded,
+                        size: 64,
+                        color: colorScheme.onSurfaceVariant.withOpacity(0.5),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No files or folders found',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'This directory is empty',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.all(20),
+                sliver: SliverList.separated(
+                  itemCount: _filteredFiles.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (_, i) {
+                    final item = _filteredFiles[i];
+                    final isDir = item is Directory;
+                    final name = item.path.split('/').last;
 
-                        return Container(
-                          width: double.infinity,
-                          margin: EdgeInsets.symmetric(
-                            vertical: 4,
-                            horizontal: 16,
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: colorScheme.outline.withOpacity(0.1),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: colorScheme.shadow.withOpacity(0.05),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
                           ),
-                          padding: EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey.withOpacity(0.1),
-                                blurRadius: 6,
-                                offset: Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: InkWell(
-                            onTap: isDir
-                                ? () => _navigateToDirectory(item)
-                                : () => _showFilePreview(item as File),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: isDir
+                              ? () => _navigateToDirectory(item)
+                              : () => _showFilePreview(item as File),
+                          borderRadius: BorderRadius.circular(16),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
                             child: Row(
                               children: [
-                                Icon(
-                                  isDir ? Icons.folder : _getFileIcon(name),
-                                  size: 40,
-                                  color: isDir
-                                      ? Colors.amber
-                                      : _getFileColor(name),
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: isDir
+                                        ? Colors.amber.withOpacity(0.15)
+                                        : _getFileColor(name).withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    isDir
+                                        ? Icons.folder_rounded
+                                        : _getFileIcon(name),
+                                    size: 28,
+                                    color: isDir
+                                        ? Colors.amber.shade700
+                                        : _getFileColor(name),
+                                  ),
                                 ),
-                                SizedBox(width: 12),
+                                const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
@@ -602,25 +743,26 @@ class _HomeScreenState extends State<HomeScreen> {
                                     children: [
                                       Text(
                                         name,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.black87,
-                                        ),
+                                        style: theme.textTheme.titleMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                              color: colorScheme.onSurface,
+                                            ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
-                                      SizedBox(height: 4),
+                                      const SizedBox(height: 4),
                                       FutureBuilder<Map<String, dynamic>>(
                                         future: _getItemInfo(item, isDir),
                                         builder: (_, snapshot) {
                                           if (!snapshot.hasData) {
                                             return Text(
                                               'Loading...',
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                color: Colors.grey[600],
-                                              ),
+                                              style: theme.textTheme.bodyMedium
+                                                  ?.copyWith(
+                                                    color: colorScheme
+                                                        .onSurfaceVariant,
+                                                  ),
                                             );
                                           }
 
@@ -632,31 +774,43 @@ class _HomeScreenState extends State<HomeScreen> {
                                             isDir
                                                 ? '$count items • $size'
                                                 : size,
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.grey[600],
-                                            ),
+                                            style: theme.textTheme.bodyMedium
+                                                ?.copyWith(
+                                                  color: colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
                                           );
                                         },
                                       ),
                                     ],
                                   ),
                                 ),
-                                IconButton(
-                                  icon: Icon(
-                                    Icons.more_vert,
-                                    color: Colors.grey[700],
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surfaceVariant
+                                        .withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                  onPressed: () => _showItemOptions(item),
+                                  child: IconButton(
+                                    icon: const Icon(
+                                      Icons.more_vert_rounded,
+                                      size: 20,
+                                    ),
+                                    color: colorScheme.onSurfaceVariant,
+                                    onPressed: () => _showItemOptions(item),
+                                    tooltip: 'More options',
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                        );
-                      },
-                    ),
-            ],
-          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
         ),
       ),
     );
