@@ -1,6 +1,8 @@
 import 'package:file_manager2/core/const/app_color.dart';
 import 'package:file_manager2/core/const/app_images.dart';
 import 'package:file_manager2/core/const/app_text.dart';
+import 'package:file_manager2/features/clean/presentation/view/new.dart';
+import 'package:file_manager2/features/cloud/presentation/view/cloud_scree.dart';
 import 'package:file_manager2/features/file/presentation/view/new.dart';
 import 'package:file_manager2/features/home/presentation/view/home.dart';
 import 'package:flutter/material.dart';
@@ -18,8 +20,8 @@ class _MainScreenState extends State<MainScreen> {
   List<Widget> body = [
     HomeScreen(),
     StorageInfoScreen(),
-    Center(child: Text('Cloud')),
-    Center(child: Text('Clean')),
+    ImagePage(),
+    AppsScreen(),
   ];
 
   @override
